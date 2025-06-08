@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from blocks.residual_block import UNetResidualBlock
+from .residual_block import UNetResidualBlock
 
 
 class SwitchSequential(nn.Sequential):

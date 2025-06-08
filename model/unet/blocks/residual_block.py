@@ -4,14 +4,14 @@ import torch.nn.functional as F
 
 
 class UNetResidualBlock(nn.Module):
-    def __init__(self, in_channels: int, out_channels: int, n_time=1280, n_groupnorm=32):
+    def __init__(self, in_channels: int, out_channels: int, n_time=1280, n_groupnorm=8):
         super().__init__()
-        self.groupnorm_feature = nn.GroupNorm(32, in_channels)
+        self.groupnorm_feature = nn.GroupNorm(n_groupnorm, in_channels)
         self.conv_features = nn.Conv2d(
             in_channels, out_channels, kernel_size=3, padding=1)
         self.linear_time = nn.Linear(n_time, out_channels)
 
-        self.groupnorm_merge = nn.GroupNorm(32, out_channels)
+        self.groupnorm_merge = nn.GroupNorm(n_groupnorm, out_channels)
         self.conv_merged = nn.Conv2d(
             out_channels, out_channels, kernel_size=3, padding=1)
 
@@ -32,7 +32,12 @@ class UNetResidualBlock(nn.Module):
 
         # (Batch_Size, In_Channels, Height, Width) -> (Batch_Size, Out_Channels, Height, Width)
         feature = self.conv_features(feature)
+
         time = F.silu(time)
+        # (1, N_Time) -> (1, Out_Channels)
+        time = self.linear_time(time)
+
+        # (Batch_Size, Out_Channels, Height, Width) + (1, Out_Channels, 1, 1) -> (Batch_Size, Out_Channels, Height, Width)
         merged = feature + time.unsqueeze(-1).unsqueeze(-1)
 
         merged = self.groupnorm_merge(merged)

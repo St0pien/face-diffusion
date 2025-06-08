@@ -2,6 +2,6 @@ from setuptools import setup, find_packages
 
 setup(
     name='face_diffusion',
-    version='0.1-alpha',
+    version='0.0.1',
     packages=find_packages()
 )

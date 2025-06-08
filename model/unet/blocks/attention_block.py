@@ -1,11 +1,11 @@
 import torch
 import torch.nn as nn
-from attention.self_attention import SelfAttention
+from model.attention.self_attention import SelfAttention
 import torch.nn.functional as F
 
 
 class UNetAttentionBlock(nn.Module):
-    def __init__(self, n_heads: int, n_embed: int, n_groupnorm=32):
+    def __init__(self, n_heads: int, n_embed: int, n_groupnorm=10):
         super().__init__()
         channels = n_heads * n_embed
 
@@ -31,7 +31,7 @@ class UNetAttentionBlock(nn.Module):
         n, c, h, w = x.shape
 
         # (Batch_Size, Features, Height, Width) -> (Batch_Size, Features, Height * Width)
-        x.view(n, c, h*w)
+        x = x.view(n, c, h*w)
 
         # (Batch_Size, Features, Height * Width) -> (Batch_Size, Height * Width, Features)
         x = x.transpose(-1, -2)

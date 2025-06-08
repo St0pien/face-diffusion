@@ -1,43 +1,126 @@
 import torch
 import torch.nn as nn
-from blocks.switch_sequential import SwitchSequential
-from blocks.residual_block import UNetResidualBlock
-from blocks.attention_block import UNetAttentionBlock
-from blocks.upsample import UpSample
+from .blocks.switch_sequential import SwitchSequential
+from .blocks.residual_block import UNetResidualBlock
+from .blocks.attention_block import UNetAttentionBlock
+from .blocks.upsample import UpSample
 
 
 class UNet(nn.Module):
     def __init__(self):
         super().__init__()
 
+        # self.encoders = nn.ModuleList([
+        #     SwitchSequential(nn.Conv2d(3, 320, kernel_size=3, padding=1)),
+        #     SwitchSequential(UNetResidualBlock(320, 320),
+        #                      UNetAttentionBlock(8, 40)),
+        #     SwitchSequential(
+        #         nn.Conv2d(320, 320, kernel_size=3, stride=2, padding=1)),
+        #     SwitchSequential(UNetResidualBlock(320, 320))
+        # ])
+
+        # self.bottleneck = SwitchSequential(
+        #     UNetResidualBlock(320, 320),
+        #     UNetAttentionBlock(8, 40),
+        #     UNetResidualBlock(320, 320)
+        # )
+
+        # self.decoders = nn.ModuleList([
+        #     SwitchSequential(UNetResidualBlock(640, 320)),
+        #     SwitchSequential(UNetResidualBlock(640, 320), UpSample(320)),
+        #     SwitchSequential(UNetResidualBlock(640, 320),
+        #                      UNetAttentionBlock(8, 40)),
+        #     SwitchSequential(UNetResidualBlock(640, 320),
+        #                      UNetAttentionBlock(8, 40))
+        # ])
         self.encoders = nn.ModuleList([
-            SwitchSequential(nn.Conv2d(4, 320, kernel_size=3, padding=1)),
+            SwitchSequential(nn.Conv2d(3, 80, kernel_size=3, padding=1)),
+
+            SwitchSequential(UNetResidualBlock(80, 80),
+                             UNetAttentionBlock(4, 20)),
+
+            SwitchSequential(UNetResidualBlock(80, 80),
+                             UNetAttentionBlock(4, 20)),
+
+            SwitchSequential(
+                nn.Conv2d(80, 80, kernel_size=3, stride=2, padding=1)),
+
+            SwitchSequential(UNetResidualBlock(80, 160),
+                             UNetAttentionBlock(4, 40)),
+
+            SwitchSequential(UNetResidualBlock(160, 160),
+                             UNetAttentionBlock(4, 40)),
+
+            SwitchSequential(
+                nn.Conv2d(160, 160, kernel_size=3, stride=2, padding=1)),
+
+            SwitchSequential(UNetResidualBlock(160, 320),
+                             UNetAttentionBlock(4, 80)),
+
             SwitchSequential(UNetResidualBlock(320, 320),
-                             UNetAttentionBlock(8, 40))
+                             UNetAttentionBlock(4, 80)),
+
+            SwitchSequential(
+                nn.Conv2d(320, 320, kernel_size=3, stride=2, padding=1)),
+
+            SwitchSequential(UNetResidualBlock(320, 320)),
+
+            SwitchSequential(UNetResidualBlock(320, 320)),
         ])
 
         self.bottleneck = SwitchSequential(
-            UNetResidualBlock(1280, 1280),
-            UNetAttentionBlock(8, 160),
-            UNetResidualBlock(1280, 1280)
+            UNetResidualBlock(320, 320),
+
+            UNetAttentionBlock(4, 80),
+
+            UNetResidualBlock(320, 320),
         )
 
         self.decoders = nn.ModuleList([
-            SwitchSequential(UNetResidualBlock(2560, 1280)),
-            SwitchSequential(UNetResidualBlock(2560, 1280)),
-            SwitchSequential(UNetResidualBlock(2560, 1280), UpSample(1280))
+            SwitchSequential(UNetResidualBlock(640, 320)),
+
+            SwitchSequential(UNetResidualBlock(640, 320)),
+
+            SwitchSequential(UNetResidualBlock(640, 320), UpSample(320)),
+
+            SwitchSequential(UNetResidualBlock(640, 320),
+                             UNetAttentionBlock(4, 80)),
+
+            SwitchSequential(UNetResidualBlock(640, 320),
+                             UNetAttentionBlock(4, 80)),
+
+            SwitchSequential(UNetResidualBlock(480, 320),
+                             UNetAttentionBlock(4, 80), UpSample(320)),
+
+            SwitchSequential(UNetResidualBlock(480, 160),
+                             UNetAttentionBlock(4, 40)),
+
+            SwitchSequential(UNetResidualBlock(320, 160),
+                             UNetAttentionBlock(4, 40)),
+
+            SwitchSequential(UNetResidualBlock(240, 160),
+                             UNetAttentionBlock(4, 40), UpSample(160)),
+
+            SwitchSequential(UNetResidualBlock(240, 80),
+                             UNetAttentionBlock(4, 20)),
+
+            SwitchSequential(UNetResidualBlock(160, 80),
+                             UNetAttentionBlock(4, 20)),
+
+            SwitchSequential(UNetResidualBlock(160, 80),
+                             UNetAttentionBlock(4, 20)),
         ])
 
     def forward(self, x: torch.Tensor, time: torch.Tensor):
-        skip_connections = []
+        skip_connections= []
         for layer in self.encoders:
-            x = layer(x, time)
+            x= layer(x, time)
             skip_connections.append(x)
 
-        x = self.bottleneck(x, time)
+        x= self.bottleneck(x, time)
 
         for layer in self.decoders:
-            x = torch.cat((x, skip_connections.pop()), dim=1)
-            x = layer(x, time)
+            x= torch.cat((x, skip_connections.pop()), dim=1)
+            x= layer(x, time)
 
         return x
