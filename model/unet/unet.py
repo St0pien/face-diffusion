@@ -34,7 +34,7 @@ class UNet(nn.Module):
         #                      UNetAttentionBlock(8, 40))
         # ])
         self.encoders = nn.ModuleList([
-            SwitchSequential(nn.Conv2d(3, 80, kernel_size=3, padding=1)),
+            SwitchSequential(nn.Conv2d(4, 80, kernel_size=3, padding=1)),
 
             SwitchSequential(UNetResidualBlock(80, 80),
                              UNetAttentionBlock(4, 20)),

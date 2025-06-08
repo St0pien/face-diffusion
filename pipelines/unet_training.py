@@ -3,6 +3,7 @@ from diffusers import DDPMScheduler
 from diffusers.utils import make_image_grid
 from tqdm.auto import tqdm
 from model.unet.blocks.time_embedding import encode_timesteps
+from model.vae.vae import VAE
 from data.utils import tensor_to_images
 import os
 import torch
@@ -13,13 +14,13 @@ import json
 class UNetTrainingPipeline:
     def __init__(self,
                  unet: nn.Module,
-                 vae: nn.Module,
+                 vae: VAE,
                  dataloader: DataLoader,
                  device='cuda',
                  ):
         self.device = device
         self.unet = unet.to(device)
-        # self.vae = vae.to('device')
+        self.vae = vae.to(device)
         self.dataloader = dataloader
 
     def train(self,
@@ -31,6 +32,7 @@ class UNetTrainingPipeline:
               n_timesteps=1000,
               sample_period=3,
               ):
+        self.vae.eval()
         output_dir = os.path.join(output_dir, name)
         os.makedirs(output_dir)
         os.makedirs(os.path.join(output_dir, 'samples'))
@@ -51,14 +53,19 @@ class UNetTrainingPipeline:
                 for timestep, batch in enumerate(epoch_progress):
                     epoch_progress.set_description("Batch:")
                     batch = batch.to(self.device)
-                    noise = torch.randn(batch[0].shape, device=self.device)
+                    encode_seed = torch.normal(0, 1, size=(
+                        1, 4, batch.shape[2] // 8, batch.shape[3]//8)).to(self.device)
+                    with torch.no_grad():
+                        latent_input = self.vae.encoder(batch, encode_seed)[0]
+
+                    noise = torch.randn(latent_input[0].shape, device=self.device)
                     timesteps = torch.randint(
-                        0, n_timesteps, (batch.shape[0],), dtype=torch.int64, device=self.device)
-                    noisy_images = noise_scheduler.add_noise(
-                        batch, noise, timesteps)
+                        0, n_timesteps, (latent_input.shape[0],), dtype=torch.int64, device=self.device)
+                    noisy_latents = noise_scheduler.add_noise(
+                        latent_input, noise, timesteps)
                     enc_timesteps = encode_timesteps(timesteps)
 
-                    noise_pred = self.unet(noisy_images, enc_timesteps)
+                    noise_pred = self.unet(noisy_latents, enc_timesteps)
 
                     loss = criterion(noise_pred, noise.unsqueeze(
                         0).expand_as(noise_pred))
@@ -76,7 +83,7 @@ class UNetTrainingPipeline:
                 loss_per_epoch.append(running_loss / len(self.dataloader))
                 if (epoch + 1) % sample_period == 0:
                     self.unet.eval()
-                    inputs = torch.randn((16, 3, 32, 32), device=self.device)
+                    inputs = torch.randn((16, 4, 32, 32), device=self.device)
                     inference_noise_scheduler = DDPMScheduler(1000)
                     inference_noise_scheduler.set_timesteps(500)
                     sample_progress = tqdm(
@@ -89,7 +96,11 @@ class UNetTrainingPipeline:
                             noise_pred = self.unet(inputs, encoded_timestep)
                         inputs = inference_noise_scheduler.step(
                             noise_pred, timestep, inputs).prev_sample
-                    output_images = tensor_to_images(inputs)
+                    
+                    with torch.no_grad():
+                        output_tensors = self.vae.decoder(inputs)
+
+                    output_images = tensor_to_images(output_tensors)
                     grid = make_image_grid(output_images, rows=4, cols=4)
                     grid.save(f'{output_dir}/samples/{epoch:04d}.png')
         finally:

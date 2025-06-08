@@ -12,7 +12,7 @@ class FaceDiffusionUNet(nn.Module):
         self.final = nn.Sequential(
             nn.GroupNorm(n_groupnorm, 80),
             nn.SiLU(),
-            nn.Conv2d(80, 3, kernel_size=3, padding=1),
+            nn.Conv2d(80, 4, kernel_size=3, padding=1),
         )
 
     def forward(self, x: torch.Tensor, time: torch.Tensor):
