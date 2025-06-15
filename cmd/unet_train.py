@@ -48,7 +48,7 @@ if options.unet is not None:
     print(f"[+] Pretrained unet loaded from {options.unet}")
 
 
-optimizer = AdamW(unet.parameters(), lr=1e-5)
+optimizer = AdamW(unet.parameters(), lr=1e-6)
 lr_scheduler = get_cosine_schedule_with_warmup(
     optimizer, num_warmup_steps=500, num_training_steps=epochs * len(dataloader))
 criterion = MSELoss()
