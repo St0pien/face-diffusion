@@ -15,7 +15,7 @@ class FaceDiffusionUNet(nn.Module):
             nn.Conv2d(80, 4, kernel_size=3, padding=1),
         )
 
-    def forward(self, x: torch.Tensor, time: torch.Tensor):
+    def forward(self, x: torch.Tensor, context: torch.Tensor, time: torch.Tensor):
         time = self.time_embedding(time)
-        output = self.unet(x, time)
+        output = self.unet(x, context, time)
         return self.final(output)

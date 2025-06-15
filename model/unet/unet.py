@@ -10,31 +10,9 @@ class UNet(nn.Module):
     def __init__(self):
         super().__init__()
 
-        # self.encoders = nn.ModuleList([
-        #     SwitchSequential(nn.Conv2d(3, 320, kernel_size=3, padding=1)),
-        #     SwitchSequential(UNetResidualBlock(320, 320),
-        #                      UNetAttentionBlock(8, 40)),
-        #     SwitchSequential(
-        #         nn.Conv2d(320, 320, kernel_size=3, stride=2, padding=1)),
-        #     SwitchSequential(UNetResidualBlock(320, 320))
-        # ])
-
-        # self.bottleneck = SwitchSequential(
-        #     UNetResidualBlock(320, 320),
-        #     UNetAttentionBlock(8, 40),
-        #     UNetResidualBlock(320, 320)
-        # )
-
-        # self.decoders = nn.ModuleList([
-        #     SwitchSequential(UNetResidualBlock(640, 320)),
-        #     SwitchSequential(UNetResidualBlock(640, 320), UpSample(320)),
-        #     SwitchSequential(UNetResidualBlock(640, 320),
-        #                      UNetAttentionBlock(8, 40)),
-        #     SwitchSequential(UNetResidualBlock(640, 320),
-        #                      UNetAttentionBlock(8, 40))
-        # ])
         self.encoders = nn.ModuleList([
-            SwitchSequential(nn.Conv2d(4, 80, kernel_size=3, padding=1)),
+            SwitchSequential(nn.Conv2d(4, 80, kernel_size=3,
+                             padding=1), nn.Dropout2d(0.1)),
 
             SwitchSequential(UNetResidualBlock(80, 80),
                              UNetAttentionBlock(4, 20)),
@@ -43,7 +21,7 @@ class UNet(nn.Module):
                              UNetAttentionBlock(4, 20)),
 
             SwitchSequential(
-                nn.Conv2d(80, 80, kernel_size=3, stride=2, padding=1)),
+                nn.Conv2d(80, 80, kernel_size=3, stride=2, padding=1), nn.Dropout2d(0.1)),
 
             SwitchSequential(UNetResidualBlock(80, 160),
                              UNetAttentionBlock(4, 40)),
@@ -52,7 +30,7 @@ class UNet(nn.Module):
                              UNetAttentionBlock(4, 40)),
 
             SwitchSequential(
-                nn.Conv2d(160, 160, kernel_size=3, stride=2, padding=1)),
+                nn.Conv2d(160, 160, kernel_size=3, stride=2, padding=1), nn.Dropout(0.1)),
 
             SwitchSequential(UNetResidualBlock(160, 320),
                              UNetAttentionBlock(4, 80)),
@@ -61,7 +39,7 @@ class UNet(nn.Module):
                              UNetAttentionBlock(4, 80)),
 
             SwitchSequential(
-                nn.Conv2d(320, 320, kernel_size=3, stride=2, padding=1)),
+                nn.Conv2d(320, 320, kernel_size=3, stride=2, padding=1), nn.Dropout(0.1)),
 
             SwitchSequential(UNetResidualBlock(320, 320)),
 
@@ -81,7 +59,8 @@ class UNet(nn.Module):
 
             SwitchSequential(UNetResidualBlock(640, 320)),
 
-            SwitchSequential(UNetResidualBlock(640, 320), UpSample(320)),
+            SwitchSequential(UNetResidualBlock(640, 320),
+                             UpSample(320), nn.Dropout(0.1)),
 
             SwitchSequential(UNetResidualBlock(640, 320),
                              UNetAttentionBlock(4, 80)),
@@ -111,16 +90,16 @@ class UNet(nn.Module):
                              UNetAttentionBlock(4, 20)),
         ])
 
-    def forward(self, x: torch.Tensor, time: torch.Tensor):
-        skip_connections= []
+    def forward(self, x: torch.Tensor, context: torch.Tensor, time: torch.Tensor):
+        skip_connections = []
         for layer in self.encoders:
-            x= layer(x, time)
+            x = layer(x, context, time)
             skip_connections.append(x)
 
-        x= self.bottleneck(x, time)
+        x = self.bottleneck(x, context, time)
 
         for layer in self.decoders:
-            x= torch.cat((x, skip_connections.pop()), dim=1)
-            x= layer(x, time)
+            x = torch.cat((x, skip_connections.pop()), dim=1)
+            x = layer(x, context, time)
 
         return x

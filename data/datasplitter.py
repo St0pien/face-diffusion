@@ -25,10 +25,10 @@ class DatasetSplitter:
             seed) if seed is not None else None
 
     def download_from_kaggle(self):
-        return kagglehub.dataset_download("badasstechie/celebahq-resized-256x256")
+        return kagglehub.dataset_download("jessicali9530/celeba-dataset")
 
-    def split_dataset(self, output_dir, max_workers=16):
-        input_dir = Path(self.download_from_kaggle())
+    def split_dataset(self, output_dir, max_workers=16, path=None):
+        input_dir = Path(self.download_from_kaggle() if path is None else path) 
         output_dir = Path(output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
 
