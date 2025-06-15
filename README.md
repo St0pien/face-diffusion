@@ -78,6 +78,34 @@ python cmd/unet_eval.py --help
 Denoising unet is a typical UNet architecture composed of standard modules and few custom blocks. Most of the levels look like this:
 ![](./assets/diagrams/unet_block.png)
 
+## Example results
+### VAE
+VAE vs original
+![](./assets/diagrams/vae_compression.png)
+
+Validation dataset in latent space
+![](./assets/diagrams/vae_pca.png)
+
+Smooth transition in latent space
+![](./assets/diagrams/transition.png)
+
+### UNet
+
+Prompt: "Young blond actress with serious face"\
+Steps: 30\
+CFG Scale: 2.0\
+![](./assets/examples/ex1.png)
+
+Prompt: "Woman with long dark hair smiling"\
+Steps: 30\
+CFG Scale: 1.5\
+![](./assets/examples/ex2.png)
+
+Prompt: "Handsome young man in tuxedo"\
+Steps: 30\
+CFG Scale: 1.5\
+![](./assets/examples/ex3.png)
+
 ## Resources used
 - [https://www.kaggle.com/datasets/jessicali9530/celeba-dataset](https://www.kaggle.com/datasets/jessicali9530/celeba-dataset)
 - [https://github.com/hkproj/pytorch-stable-diffusion](https://github.com/hkproj/pytorch-stable-diffusion)
